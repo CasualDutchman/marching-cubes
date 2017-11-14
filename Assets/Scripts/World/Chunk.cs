@@ -101,7 +101,7 @@ public class Chunk {
 
         CreateMesh(mesh);
 
-        //if(!worldObj.shown)
+        if(!worldObj.shown)
             SetMarchingCubes(mesh);
 
         /*
@@ -232,7 +232,9 @@ public class Chunk {
 
                     Vector3 blockLookup = center + new Vector3(x, y, z);
 
-                    if ((x == 0 && y == 0 && z == 0) || (Mathf.Abs(x) == 1 && y == 0 && z == 0) || (x == 0 && Mathf.Abs(y) == 1 && z == 0) || (x == 0 && y == 0 && Mathf.Abs(z) == 1)) {
+                    //check if it can 
+                    
+                    if (x == 0 && y == 0 && z == 0) {
                         SetMarchingInfo(key, true);
                     }
 
@@ -240,6 +242,11 @@ public class Chunk {
                         SetMarchingInfo(key, true);
                     }
 
+                    if (neighbours.ContainsKey(blockLookup)) {
+                        SetMarchingInfo(key, neighbours[blockLookup].data == 1);
+                    }
+
+                    /*
                     Vector3 lookup = center + new Vector3(x, y, z);
 
                     if (Mathf.Abs(x) == 1 && y == 0 && Mathf.Abs(z) == 1) {
@@ -285,6 +292,7 @@ public class Chunk {
                     }
 
                     SetMarchingInfo(key, false);
+                    */
                 }
             }
         }
@@ -312,19 +320,21 @@ public class Chunk {
                     Vector3 marchingCubeBegin = startMarchingInfoKey + new Vector3((float)x * 0.5f, (float)y * 0.5f, (float)z * 0.5f);
 
                     Vector3[] activeMarchingInfo = new Vector3[8];
-                    bool[] activeMarhcingInfoBool = new bool[8];
 
                     if (!MarchInfoContainsWholeCube(marchingCubeBegin))
                         continue;
+
+                    int code = 0;
 
                     for (int yInMarch = 0; yInMarch < 2; yInMarch++) {
                         for (int zInMarch = 0; zInMarch < 2; zInMarch++) {
                             for (int xInMarch = 0; xInMarch < 2; xInMarch++) {
                                 Vector3 newkey = marchingCubeBegin + new Vector3((float)xInMarch * 0.5f, (float)yInMarch * 0.5f, (float)zInMarch * 0.5f);
                                 if (marchingInfo.ContainsKey(newkey)) {
-                                    int posArray = (yInMarch * 4) + (zInMarch * 2) + xInMarch;
-                                    activeMarchingInfo[posArray] = newkey;
-                                    activeMarhcingInfoBool[posArray] = marchingInfo[newkey];
+                                    activeMarchingInfo[(yInMarch * 4) + (zInMarch * 2) + xInMarch] = newkey;
+
+                                    code <<= 1;
+                                    code |= marchingInfo[newkey] ? 1 : 0;
                                 } else {
                                     continue;
                                 }
@@ -332,18 +342,7 @@ public class Chunk {
                         }
                     }
 
-                    int i = 0;
-                    int code = 0;
-                    foreach (bool b in activeMarhcingInfoBool) {
-                        if (b)
-                            i++;
-
-                        code <<= 1;
-                        code |= b ? 1 : 0;
-                    }
-
-                    
-                    if (i >= 8 || i < 3) {
+                    if (code == 255) {
                         continue;
                     }
 
@@ -376,45 +375,39 @@ public class Chunk {
                         return true;
                     };
 
-                    Func<int[], int[], bool> AddSingleFace = delegate (int[] vert, int[] tri) {
-                        verts.Add(activeMarchingInfo[vert[0]] - GetWorldPosition());
-                        verts.Add(activeMarchingInfo[vert[1]] - GetWorldPosition());
-                        verts.Add(activeMarchingInfo[vert[2]] - GetWorldPosition());
-
-                        tris.Add(currentTriCount + tri[0]);
-                        tris.Add(currentTriCount + tri[1]);
-                        tris.Add(currentTriCount + tri[2]);
-
-                        uvs.Add(new Vector2(0, 0));
-                        uvs.Add(new Vector2(1, 0));
-                        uvs.Add(new Vector2(0, 1));
+                    Func<int[], int[], Vector2[], bool> AddFaces = delegate (int[] vert, int[] tri, Vector2[] uv) {
+                        for(int i = 0; i < vert.Length; i++) {
+                            verts.Add(activeMarchingInfo[vert[i]] - GetWorldPosition());
+                            tris.Add(currentTriCount + tri[i]);
+                            uvs.Add(uv[i]);
+                        }
                         return true;
                     };
 
 
                     if (code == 112)
-                        AddSingleFace(new int[] { 1, 3, 2 }, new int[] { 2, 1, 0 });
+                        AddFaces(new int[] { 1, 3, 2 }, new int[] { 2, 1, 0 }, new Vector2[] { new Vector2(0, 0), new Vector2(1, 0), new Vector2(0, 1) });
 
                     else if (code == 113)
-                        AddSingleFace(new int[] { 1, 7, 2 }, new int[] { 2, 1, 0 });
+                        AddFaces(new int[] { 1, 7, 2 }, new int[] { 2, 1, 0 }, new Vector2[] { new Vector2(0, 0), new Vector2(1, 0), new Vector2(0, 1) });
 
                     else if (code == 176)
-                        AddSingleFace(new int[] { 0, 3, 2 }, new int[] { 2, 1, 0 });
+                        AddFaces(new int[] { 0, 3, 2 }, new int[] { 2, 1, 0 }, new Vector2[] { new Vector2(0, 0), new Vector2(1, 0), new Vector2(0, 1) });
 
                     else if (code == 178)
-                        AddSingleFace(new int[] { 0, 3, 6 }, new int[] { 2, 1, 0 });
+                        AddFaces(new int[] { 0, 3, 6 }, new int[] { 2, 1, 0 }, new Vector2[] { new Vector2(0, 0), new Vector2(1, 0), new Vector2(0, 1) });
 
                     else if (code == 208)
-                        AddSingleFace(new int[] { 0, 1, 3 }, new int[] { 2, 1, 0 });
+                        AddFaces(new int[] { 0, 1, 3 }, new int[] { 2, 1, 0 }, new Vector2[] { new Vector2(0, 0), new Vector2(1, 0), new Vector2(0, 1) });
 
                     else if (code == 212)
-                        AddSingleFace(new int[] { 0, 5, 3 }, new int[] { 2, 1, 0 });
+                        AddFaces(new int[] { 0, 5, 3 }, new int[] { 2, 1, 0 }, new Vector2[] { new Vector2(0, 0), new Vector2(1, 0), new Vector2(0, 1) });
 
                     else if (code == 224)
-                        AddSingleFace(new int[] { 0, 1, 2 }, new int[] { 2, 1, 0 });
+                        AddFaces(new int[] { 0, 1, 2 }, new int[] { 2, 1, 0 }, new Vector2[] { new Vector2(0, 0), new Vector2(1, 0), new Vector2(0, 1) });
 
                     else if (code == 232)
-                        AddSingleFace(new int[] { 1, 2, 4 }, new int[] { 2, 1, 0 });
+                        AddFaces(new int[] { 1, 2, 4 }, new int[] { 2, 1, 0 }, new Vector2[] { new Vector2(0, 0), new Vector2(1, 0), new Vector2(0, 1) });
 
                     else if (code == 240)
                         AddTwoFaces(new int[] { 0, 1, 2, 1, 3, 2 }, new int[] { 2, 1, 0, 5, 4, 3 });
@@ -435,7 +428,7 @@ public class Chunk {
                         AddTwoFaces(new int[] { 0, 5, 2, 5, 7, 2 }, new int[] { 2, 1, 0, 5, 4, 3 });
 
                     else if (code == 247)
-                        AddSingleFace(new int[] { 0, 5, 6 }, new int[] { 2, 1, 0 });
+                        AddFaces(new int[] { 0, 5, 6 }, new int[] { 2, 1, 0 }, new Vector2[] { new Vector2(0, 0), new Vector2(1, 0), new Vector2(0, 1) });
 
                     else if (code == 248) 
                         AddTwoFaces(new int[] { 1, 3, 2, 4, 1, 2 }, new int[] { 2, 1, 0, 5, 4, 3 });
@@ -444,16 +437,16 @@ public class Chunk {
                         AddTwoFaces(new int[] { 4, 1, 3, 4, 3, 6 }, new int[] { 2, 1, 0, 5, 4, 3 });
 
                     else if (code == 251)
-                        AddSingleFace(new int[] { 1, 7, 4 }, new int[] { 2, 1, 0 });
+                        AddFaces(new int[] { 1, 7, 4 }, new int[] { 2, 1, 0 }, new Vector2[] { new Vector2(0, 0), new Vector2(1, 0), new Vector2(0, 1) });
 
                     else if (code == 252)
                         AddTwoFaces(new int[] { 4, 5, 2, 5, 3, 2 }, new int[] { 2, 1, 0, 5, 4, 3 });
 
                     else if (code == 253)
-                        AddSingleFace(new int[] { 2, 4, 7 }, new int[] { 2, 1, 0 });
+                        AddFaces(new int[] { 2, 4, 7 }, new int[] { 2, 1, 0 }, new Vector2[] { new Vector2(0, 0), new Vector2(1, 0), new Vector2(0, 1) });
 
                     else if (code == 254)
-                        AddSingleFace(new int[] { 3, 6, 5 }, new int[] { 2, 1, 0 });
+                        AddFaces(new int[] { 3, 6, 5 }, new int[] { 2, 1, 0 }, new Vector2[] { new Vector2(0, 0), new Vector2(1, 0), new Vector2(0, 1) });
                 }
             }
         }
