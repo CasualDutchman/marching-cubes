@@ -18,4 +18,6 @@ public class Block {
     public Vector3 GetWorldPosition() {
         return new Vector3(chunk.GetPosition().x * chunk.worldObj.maxChunkSize + positionInChunk.x, positionInChunk.y, chunk.GetPosition().y * chunk.worldObj.maxChunkSize + positionInChunk.z);
     }
+
+
 }

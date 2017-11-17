@@ -22,8 +22,14 @@ public class World : MonoBehaviour {
 
     public Noise noise;
 
-    public bool shown;
-    public bool told;
+    public int shown = 0;
+    public int goal = 1;
+
+    public bool gotit {
+        get {
+            return shown >= goal;
+        }
+    }
 
     void Awake() {
         instance = this;

@@ -12,7 +12,8 @@ public class Chunk {
     Dictionary<Vector3, Block> blocks = new Dictionary<Vector3, Block>();
     GameObject chunkObject;
 
-    Dictionary<Vector3, bool> marchingInfo = new Dictionary<Vector3, bool>();
+    Dictionary<Vector3, int> marchingInfo = new Dictionary<Vector3, int>();
+    Dictionary<Vector3, bool> marching = new Dictionary<Vector3, bool>();
 
     List<Vector3> meshVerts = new List<Vector3>();
     List<int> meshTris = new List<int>();
@@ -48,7 +49,8 @@ public class Chunk {
 
         if (!chunkObject.GetComponent<MeshFilter>() && b) {
             GenerateMesh();
-        }
+            worldObj.shown++;
+        }  
     }
 
     void Generate() {
@@ -101,23 +103,12 @@ public class Chunk {
 
         CreateMesh(mesh);
 
-        if(!worldObj.shown)
+        if(!worldObj.gotit)
             SetMarchingCubes(mesh);
 
-        /*
-        if (!worldObj.shown)
-            foreach (KeyValuePair<Vector3, bool> info in marchingInfo) {
-                //if (!info.Value) {
-                    GameObject go = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                    go.transform.SetParent(chunkObject.transform);
-                    go.transform.position = info.Key;
-                    go.transform.localScale = Vector3.one * 0.1f;
-                    go.GetComponent<MeshRenderer>().material.color = info.Value ? Color.red : Color.yellow;
-                //}
-            }
-            //*/
+        
 
-        worldObj.shown = true;
+        
 
         mesh.RecalculateNormals();
 
@@ -125,6 +116,10 @@ public class Chunk {
 
         MeshRenderer meshRenderer = chunkObject.AddComponent<MeshRenderer>();
         meshRenderer.material = Resources.Load<Material>("Material/WorldMaterial");
+
+
+        marching.Clear();
+        marchingInfo.Clear();
     }
 
     void CreateMesh(Mesh mesh) {
@@ -133,8 +128,8 @@ public class Chunk {
                 for (int y = 0; y < worldObj.maxHeight; y++) {//
                     Block block = GetBlock(x, y, z);
 
-                    if (block.data == 0) //block has no data? dont bother looking further
-                        continue;
+                    //if (block.data == 0) //block has no data? dont bother looking further
+                    ///    continue;
 
                     SetMarchingInfo(block);
                 }
@@ -225,107 +220,250 @@ public class Chunk {
         Dictionary<Vector3, Block> neighbours = GetNeighbourBlocks(block);
         Vector3 center = GetWorldPosition() + block.positionInChunk;
 
+        int code = 0;
+        int i = 0;
+
+        for (int y = 0; y < 2; y++) {
+            for (int z = 0; z < 2; z++) {
+                for (int x = 0; x < 2; x++) {
+
+                    Vector3 key = center - (Vector3.one * 0.5f) + new Vector3((float)x * 0.5f, (float)y * 0.5f, (float)z * 0.5f);
+
+                    for (int y2 = 0; y2 < 2; y2++) {
+                        for (int z2 = 0; z2 < 2; z2++) {
+                            for (int x2 = 0; x2 < 2; x2++) {
+                                Vector3 blockLookup = center - Vector3.one + new Vector3(x + x2, y + y2, z + z2);
+
+                                if (!worldObj.gotit)
+                                    //Debug.Log(blockLookup);
+
+                                if (blockLookup.x == 0 && blockLookup.y == 0 && blockLookup.z == 0) {
+                                    code <<= 1;
+                                    code |= block.data;
+                                    i++;
+                                    continue;
+                                }
+
+                                int j = 0;
+                                if (neighbours.ContainsKey(blockLookup)) {
+                                    j = neighbours[blockLookup].data;
+                                }
+
+                                if (blockLookup.y <= 0) {
+                                    j = 1;
+                                }
+
+                                code <<= 1;
+                                code |= j;
+                                i++;
+                            }
+                        }
+                    }
+
+                    if (!worldObj.gotit)
+                        Debug.Log(code);
+
+                    if (i == 8) {
+                        if (!marchingInfo.ContainsKey(key)) {
+                            marchingInfo.Add(key, code);
+                        } else {
+                            marchingInfo[key] = code;
+                        }
+                    }
+
+                    code = 0;
+                    i = 0;
+                }
+            }
+        }
+
+        /* //WORKING CODE
+        for (int y = 0; y < 2; y++) {
+            for (int z = 0; z < 2; z++) {
+                for (int x = 0; x < 2; x++) { 
+                    Vector3 blockLookup = center + new Vector3(x, y, z);
+
+                    if (x == 0 && y == 0 && z == 0) {
+                        code <<= 1;
+                        code |= block.data;
+                        i++;
+                        continue;
+                    }
+
+                    int j = 0;
+                    if (neighbours.ContainsKey(blockLookup)) {
+                        j = neighbours[blockLookup].data;
+                    }
+
+                    if (blockLookup.y <= 0) {
+                        j = 1;
+                    }
+
+                    code <<= 1;
+                    code |= j;
+                    i++;
+                }
+            }
+        }
+
+        if(!worldObj.gotit)
+            Debug.Log(code);
+
+        if (i == 8) {
+            if (!marchingInfo.ContainsKey(center)) {
+                marchingInfo.Add(center, code);
+            } else {
+                marchingInfo[center] = code;
+            }
+        }
+
+        code = 0;
+        i = 0;
+
+        //END WORKING CODE
+
+        /*
         for (int y = -1; y <= 2; y++) {
-            for (int z = -2; z <= 2; z++) {
-                for (int x = -2; x <= 2; x++) {
+            for (int z = -1; z <= 1; z++) {
+                for (int x = -1; x <= 1; x++) {
                     Vector3 key = center + new Vector3((float)x * 0.5f, (float)y * 0.5f, (float)z * 0.5f);
 
                     Vector3 blockLookup = center + new Vector3(x, y, z);
 
-                    //check if it can 
-                    
                     if (x == 0 && y == 0 && z == 0) {
-                        SetMarchingInfo(key, true);
+                        if (!marching.ContainsKey(key)) {
+                            marching.Add(key, true);
+                        } else {
+                            marching[key] = true;
+                        }
+                        continue;
                     }
 
                     if (blockLookup.y < 0) {
-                        SetMarchingInfo(key, true);
+                        if (!marching.ContainsKey(key)) {
+                            marching.Add(key, true);
+                        } else {
+                            marching[key] = true;
+                        }
+                        continue;
                     }
 
                     if (neighbours.ContainsKey(blockLookup)) {
-                        SetMarchingInfo(key, neighbours[blockLookup].data == 1);
-                    }
-
-                    /*
-                    Vector3 lookup = center + new Vector3(x, y, z);
-
-                    if (Mathf.Abs(x) == 1 && y == 0 && Mathf.Abs(z) == 1) {
-                        if (neighbours.ContainsKey(center + new Vector3(x, y, y))){
-                            if(neighbours[center + new Vector3(x, y, y)].data == 1)
-                                SetMarchingInfo(key, true);
+                        if (!marching.ContainsKey(key)) {
+                            marching.Add(key, neighbours[blockLookup].data == 1);
+                        } else {
+                            marching[key] = neighbours[blockLookup].data == 1;
                         }
-
-                        if (neighbours.ContainsKey(center + new Vector3(y, y, z))) {
-                            if (neighbours[center + new Vector3(y, y, z)].data == 1)
-                                SetMarchingInfo(key, true);
+                    } 
+                    else {
+                        if (!marching.ContainsKey(key)) {
+                            marching.Add(key, false);
+                        } else {
+                            marching[key] = false;
                         }
                     }
-                    if (Mathf.Abs(x) == 1 && Mathf.Abs(y) == 1 && z == 0) {
-                        if (neighbours.ContainsKey(center + new Vector3(x, z, z))) {
-                            if (neighbours[center + new Vector3(x, z, z)].data == 1)
-                                SetMarchingInfo(key, true);
-                        }
-                    }
-                    if (x == 0 && Mathf.Abs(y) == 1 && Mathf.Abs(z) == 1) {
-                        if (neighbours.ContainsKey(center + new Vector3(x, x, z))) {
-                            if (neighbours[center + new Vector3(x, x, z)].data == 1)
-                                SetMarchingInfo(key, true);
-                        }
-                    }
-                    if (Mathf.Abs(x) == 1 && Mathf.Abs(y) == 1 && Mathf.Abs(z) == 1) {
-                        for(int checkY = 0; checkY <= 1; checkY++) {
-                            int i = 0;
-                            if(y == -1) {
-                                i = y + checkY;
-                            }
-                            else if (y == 1) {
-                                i = y - checkY;
-                            }
-
-                            if (neighbours.ContainsKey(center + new Vector3(x, i, z))) {
-                                if (neighbours[center + new Vector3(x, i, z)].data == 1) {
-                                    SetMarchingInfo(key, true);
-                                    break;
-                                }
-                            }
-                        }
-                    }
-
-                    SetMarchingInfo(key, false);
-                    */
                 }
             }
         }
-    }
 
-    void SetMarchingInfo(Vector3 key, bool value) {
-        if (!marchingInfo.ContainsKey(key)) {
-            marchingInfo.Add(key, value);
-        } else {
-            if (!marchingInfo[key])
-                marchingInfo[key] = value;
+        for (int y = -1; y <= 0; y++) {
+            for (int z = -1; z <= 0; z++) {
+                for (int x = -1; x <= 0; x++) {
+                    Vector3 key = center + new Vector3((float)x * 0.5f, (float)y * 0.5f, (float)z * 0.5f);
+
+                    for (int yInMarch = 0; yInMarch < 2; yInMarch++) {
+                        for (int zInMarch = 0; zInMarch < 2; zInMarch++) {
+                            for (int xInMarch = 0; xInMarch < 2; xInMarch++) {
+
+                                Vector3 newkey = key + new Vector3((float)xInMarch * 0.5f, (float)yInMarch * 0.5f, (float)zInMarch * 0.5f);
+
+                                if (x + xInMarch == 0 && y + yInMarch == 0 && z + zInMarch == 0) {
+                                    code <<= 1;
+                                    code |= 1;
+                                    i++;
+                                    continue;
+                                }
+
+                                int j = 0;
+                                if (marching.ContainsKey(newkey)) {
+                                    j = marching[newkey] ? 1 : 0;
+                                }
+
+                                if (newkey.y < 0) {
+                                    j = 1;
+                                }
+
+                                code <<= 1;
+                                code |= j;
+                                i++;
+                            }
+                        }
+                    }
+
+
+                    if (i == 8) {
+                        if (!marchingInfo.ContainsKey(key)) {
+                            marchingInfo.Add(key, code);
+                        } else {
+                            marchingInfo[key] = code;
+                        }
+                    }
+
+                    code = 0;
+                    i = 0;
+                }
+            }
         }
+        */
     }
 
     void SetMarchingCubes(Mesh mesh) {
-        Vector3 startMarchingInfoKey = GetWorldPosition() - (Vector3.one * 0.5f);
+        Vector3 startMarchingInfoKey = GetWorldPosition();
 
         List<Vector3> verts = new List<Vector3>();
         List<Vector2> uvs = new List<Vector2>();
         List<int> tris = new List<int>();
 
-        for (int y = 0; y < worldObj.maxHeight * 2 + 1; y++) {
-            for (int z = 0; z < worldObj.maxChunkSize * 2; z++) {
-                for (int x = 0; x < worldObj.maxChunkSize * 2; x++) {
-                    Vector3 marchingCubeBegin = startMarchingInfoKey + new Vector3((float)x * 0.5f, (float)y * 0.5f, (float)z * 0.5f);
+        bool b = false;
 
-                    Vector3[] activeMarchingInfo = new Vector3[8];
+        for (int y = 0; y < worldObj.maxHeight; y++) {
+            for (int z = 0; z < worldObj.maxChunkSize; z++) {
+                for (int x = 0; x < worldObj.maxChunkSize; x++) {
+                    Vector3 marchingCubeBegin = startMarchingInfoKey + new Vector3(x, y, z);
 
-                    if (!MarchInfoContainsWholeCube(marchingCubeBegin))
-                        continue;
+                    //
+                    //TODO
+
+                    Vector3[] activeMarchingInfo = new Vector3[]{
+                        marchingCubeBegin + new Vector3(0.5f, 0, 0),
+                        marchingCubeBegin + new Vector3(0, 0, 0.5f),
+                        marchingCubeBegin + new Vector3(1f, 0, 0.5f),
+                        marchingCubeBegin + new Vector3(0.5f, 0, 1f),
+
+                        marchingCubeBegin + new Vector3(0, 0.5f, 0),
+                        marchingCubeBegin + new Vector3(1f, 0.5f, 0),
+                        marchingCubeBegin + new Vector3(0, 0.5f, 1f),
+                        marchingCubeBegin + new Vector3(1f, 0.5f, 1f),
+
+                        marchingCubeBegin + new Vector3(0.5f, 1f, 0),
+                        marchingCubeBegin + new Vector3(0, 1f, 0.5f),
+                        marchingCubeBegin + new Vector3(1f, 1f, 0.5f),
+                        marchingCubeBegin + new Vector3(0.5f, 1f, 1f)
+                    };
+
+                    //if (!MarchInfoContainsWholeCube(marchingCubeBegin))
+                    //    continue;
 
                     int code = 0;
+                    if (marchingInfo.ContainsKey(marchingCubeBegin)) {
+                        code = marchingInfo[marchingCubeBegin];
+                    }
 
+                    if(!worldObj.gotit) {
+                        //Debug.Log(Convert.ToString(code, 2));
+                    }
+
+                    /*
                     for (int yInMarch = 0; yInMarch < 2; yInMarch++) {
                         for (int zInMarch = 0; zInMarch < 2; zInMarch++) {
                             for (int xInMarch = 0; xInMarch < 2; xInMarch++) {
@@ -334,119 +472,115 @@ public class Chunk {
                                     activeMarchingInfo[(yInMarch * 4) + (zInMarch * 2) + xInMarch] = newkey;
 
                                     code <<= 1;
-                                    code |= marchingInfo[newkey] ? 1 : 0;
+                                    code |= marchingInfo[newkey]. ? 1 : 0;
                                 } else {
                                     continue;
                                 }
                             }
                         }
-                    }
+                    }*/
 
-                    if (code == 255) {
+                    if (code == 255 || code == 0) {
                         continue;
                     }
+
+                    /*
+                    if (!worldObj.shown) { 
+                        //foreach (KeyValuePair<Vector3, int> info in marchingInfo) {
+                            //if (!info.Value) {
+
+                            //int index = 0;
+                            char[] s = Convert.ToString(code, 2).ToCharArray();
+                            for (int i = 0; i < 8; i++) {
+                                int k = 8 - s.Length;
+
+                                Vector3 newPos = marchingCubeBegin + new Vector3(0.05f, 0.05f, 0.05f) + new Vector3(Mathf.FloorToInt(i % 2f) * 0.4f, Mathf.FloorToInt(i / 4) * 0.4f, Mathf.FloorToInt((i % 4) / 2) * 0.4f);
+
+                                int currentBit = 0;
+
+                                if (i >= k) {
+                                    currentBit = int.Parse(s[i - k].ToString());
+                                }
+
+                                GameObject go = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                                go.transform.SetParent(chunkObject.transform);
+                                go.transform.position = newPos;
+                                go.transform.localScale = Vector3.one * 0.05f;
+                                go.GetComponent<MeshRenderer>().material.color = currentBit == 1 ? Color.red : Color.yellow;
+                            }
+
+                            //GameObject go = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                            //go.transform.SetParent(chunkObject.transform);
+                            //go.transform.position = info.Key;
+                            //go.transform.localScale = Vector3.one * 0.1f;
+                            //go.GetComponent<MeshRenderer>().material.color = info.Value ? Color.red : Color.yellow;
+                            //}
+                        }
+                    //*/
+
+                    /*
+                    if (!worldObj.shown && !b) {
+                        foreach (KeyValuePair<Vector3, int> info in marchingInfo) {
+                            //if (!info.Value) {
+                                GameObject go = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                                go.transform.SetParent(chunkObject.transform);
+                                go.transform.position = info.Key;
+                                go.transform.localScale = Vector3.one * 0.05f;
+                                go.GetComponent<MeshRenderer>().material.color = Color.yellow;
+                            //}
+                        }
+                        b = true;
+                    }
+                    //*/
 
                     //Debug.Log(code);
 
                     int currentTriCount = tris.Count;
 
                     //System.Func needed to keep all local variables and don't make it messy
-                    Func<int[], int[], bool> AddTwoFaces = delegate (int[] vert, int[] tri) {
-                        verts.Add(activeMarchingInfo[vert[0]] - GetWorldPosition());
-                        verts.Add(activeMarchingInfo[vert[1]] - GetWorldPosition());
-                        verts.Add(activeMarchingInfo[vert[2]] - GetWorldPosition());
-                        verts.Add(activeMarchingInfo[vert[3]] - GetWorldPosition());
-                        verts.Add(activeMarchingInfo[vert[4]] - GetWorldPosition());
-                        verts.Add(activeMarchingInfo[vert[5]] - GetWorldPosition());
+                    Func<int[], bool> AddFaces = delegate (int[] vert) {
 
-                        tris.Add(currentTriCount + tri[0]);
-                        tris.Add(currentTriCount + tri[1]);
-                        tris.Add(currentTriCount + tri[2]);
-                        tris.Add(currentTriCount + tri[3]);
-                        tris.Add(currentTriCount + tri[4]);
-                        tris.Add(currentTriCount + tri[5]);
-
-                        uvs.Add(new Vector2(0, 0));
-                        uvs.Add(new Vector2(1, 0));
-                        uvs.Add(new Vector2(0, 1));
-                        uvs.Add(new Vector2(1, 0));
-                        uvs.Add(new Vector2(1, 1));
-                        uvs.Add(new Vector2(0, 1));
-                        return true;
-                    };
-
-                    Func<int[], int[], Vector2[], bool> AddFaces = delegate (int[] vert, int[] tri, Vector2[] uv) {
-                        for(int i = 0; i < vert.Length; i++) {
+                        for (int i = 0; i < vert.Length; i++) {
                             verts.Add(activeMarchingInfo[vert[i]] - GetWorldPosition());
-                            tris.Add(currentTriCount + tri[i]);
-                            uvs.Add(uv[i]);
+                            //
+                            //TODO
+                            tris.Add(currentTriCount + (Mathf.FloorToInt(i / 3) * 3) + (2 - (i % 3)));
+                            uvs.Add(new Vector2(0, 0));
                         }
                         return true;
                     };
 
+                    switch (code) {
 
-                    if (code == 112)
-                        AddFaces(new int[] { 1, 3, 2 }, new int[] { 2, 1, 0 }, new Vector2[] { new Vector2(0, 0), new Vector2(1, 0), new Vector2(0, 1) });
-
-                    else if (code == 113)
-                        AddFaces(new int[] { 1, 7, 2 }, new int[] { 2, 1, 0 }, new Vector2[] { new Vector2(0, 0), new Vector2(1, 0), new Vector2(0, 1) });
-
-                    else if (code == 176)
-                        AddFaces(new int[] { 0, 3, 2 }, new int[] { 2, 1, 0 }, new Vector2[] { new Vector2(0, 0), new Vector2(1, 0), new Vector2(0, 1) });
-
-                    else if (code == 178)
-                        AddFaces(new int[] { 0, 3, 6 }, new int[] { 2, 1, 0 }, new Vector2[] { new Vector2(0, 0), new Vector2(1, 0), new Vector2(0, 1) });
-
-                    else if (code == 208)
-                        AddFaces(new int[] { 0, 1, 3 }, new int[] { 2, 1, 0 }, new Vector2[] { new Vector2(0, 0), new Vector2(1, 0), new Vector2(0, 1) });
-
-                    else if (code == 212)
-                        AddFaces(new int[] { 0, 5, 3 }, new int[] { 2, 1, 0 }, new Vector2[] { new Vector2(0, 0), new Vector2(1, 0), new Vector2(0, 1) });
-
-                    else if (code == 224)
-                        AddFaces(new int[] { 0, 1, 2 }, new int[] { 2, 1, 0 }, new Vector2[] { new Vector2(0, 0), new Vector2(1, 0), new Vector2(0, 1) });
-
-                    else if (code == 232)
-                        AddFaces(new int[] { 1, 2, 4 }, new int[] { 2, 1, 0 }, new Vector2[] { new Vector2(0, 0), new Vector2(1, 0), new Vector2(0, 1) });
-
-                    else if (code == 240)
-                        AddTwoFaces(new int[] { 0, 1, 2, 1, 3, 2 }, new int[] { 2, 1, 0, 5, 4, 3 });
-
-                    else if (code == 241)
-                        AddTwoFaces(new int[] { 0, 1, 2, 1, 7, 2 }, new int[] { 2, 1, 0, 5, 4, 3 });
-
-                    else if (code == 242)
-                        AddTwoFaces(new int[] { 0, 1, 3, 0, 3, 6 }, new int[] { 2, 1, 0, 5, 4, 3 });
-
-                    else if (code == 243) 
-                        AddTwoFaces(new int[] { 0, 1, 6, 1, 7, 6 }, new int[] { 2, 1, 0, 5, 4, 3 });
-
-                    else if (code == 244)
-                        AddTwoFaces(new int[] { 0, 3, 2, 0, 5, 3 }, new int[] { 2, 1, 0, 5, 4, 3 });
-
-                    else if (code == 245)
-                        AddTwoFaces(new int[] { 0, 5, 2, 5, 7, 2 }, new int[] { 2, 1, 0, 5, 4, 3 });
-
-                    else if (code == 247)
-                        AddFaces(new int[] { 0, 5, 6 }, new int[] { 2, 1, 0 }, new Vector2[] { new Vector2(0, 0), new Vector2(1, 0), new Vector2(0, 1) });
-
-                    else if (code == 248) 
-                        AddTwoFaces(new int[] { 1, 3, 2, 4, 1, 2 }, new int[] { 2, 1, 0, 5, 4, 3 });
-
-                    else if (code == 250)
-                        AddTwoFaces(new int[] { 4, 1, 3, 4, 3, 6 }, new int[] { 2, 1, 0, 5, 4, 3 });
-
-                    else if (code == 251)
-                        AddFaces(new int[] { 1, 7, 4 }, new int[] { 2, 1, 0 }, new Vector2[] { new Vector2(0, 0), new Vector2(1, 0), new Vector2(0, 1) });
-
-                    else if (code == 252)
-                        AddTwoFaces(new int[] { 4, 5, 2, 5, 3, 2 }, new int[] { 2, 1, 0, 5, 4, 3 });
-
-                    else if (code == 253)
-                        AddFaces(new int[] { 2, 4, 7 }, new int[] { 2, 1, 0 }, new Vector2[] { new Vector2(0, 0), new Vector2(1, 0), new Vector2(0, 1) });
-
-                    else if (code == 254)
-                        AddFaces(new int[] { 3, 6, 5 }, new int[] { 2, 1, 0 }, new Vector2[] { new Vector2(0, 0), new Vector2(1, 0), new Vector2(0, 1) });
+                        case 15: AddFaces(new int[] { 0, 1, 4 }); break;
+                        case 16: AddFaces(new int[] { 2, 7, 3 }); break;
+                        case 48: AddFaces(new int[] { 1, 2, 7, 1, 7, 6}); break;
+                        case 80: AddFaces(new int[] { 0, 5, 3, 3, 5, 7}); break;
+                        //case 192: AddFaces(new int[] { }); break;
+                        case 112: AddFaces(new int[] { 0, 5, 1, 1, 5, 6, 5, 7, 6 }); break;
+                        //case 113: AddFaces(new int[] { 1, 7, 2 }); break;
+                        case 128: AddFaces(new int[] { 0, 1, 4 }); break;
+                        //case 176: AddFaces(new int[] { 0, 3, 2 }); break;
+                        //case 178: AddFaces(new int[] { 0, 3, 6 }); break;
+                        case 192: AddFaces(new int[] { 4, 5, 2, 4, 2, 1 }); break;
+                        //case 208: AddFaces(new int[] { 0, 1, 3 }); break;
+                        //case 212: AddFaces(new int[] { 0, 5, 3 }); break;
+                        case 224: AddFaces(new int[] { 4, 5, 6, 6, 5, 2, 6, 2, 3 }); break;
+                        //case 232: AddFaces(new int[] { 1, 2, 4 }); break;
+                        case 240: AddFaces(new int[] { 4, 5, 7, 4, 7, 6 }); break;
+                        case 241: AddFaces(new int[] { 4, 5, 6, 6, 5, 10, 6, 10, 11 }); break;
+                        //case 242: AddFaces(new int[] { 0, 1, 3, 0, 3, 6 }); break;
+                        case 243: AddFaces(new int[] { 4, 5, 10, 4, 10, 9 }); break;
+                        //case 244: AddFaces(new int[] { 4, 8, 6, 8, 10, 6, 10, 7, 6 }); break;
+                        case 245: AddFaces(new int[] { 4, 8, 6, 6, 8, 11}); break;
+                        case 247: AddFaces(new int[] { 4, 8, 9 }); break;
+                        case 248: AddFaces(new int[] { 9, 8, 5, 9, 5, 6, 6, 5, 7 }); break;
+                        case 250: AddFaces(new int[] { 6, 4, 8, 6, 8, 11 }); break;
+                        case 251: AddFaces(new int[] { 5, 10, 8 }); break;
+                        case 252: AddFaces(new int[] { 7, 6, 9, 7, 9, 10 }); break;
+                        case 253: AddFaces(new int[] { 6, 3, 11 }); break;
+                        case 254: AddFaces(new int[] { 7, 11, 10 }); break;
+                    }
                 }
             }
         }
