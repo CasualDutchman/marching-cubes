@@ -27,12 +27,14 @@ public class PlayerMovement : MonoBehaviour {
 	}
 	
 	void Update () {
+        //looking around
         yaw += Input.GetAxis("Mouse X") * mouseSpeed;
         pitch = Mathf.Clamp(pitch - Input.GetAxis("Mouse Y") * mouseSpeed, -90, 90);
 
         transform.GetChild(0).localEulerAngles = new Vector3(pitch, 0, 0);
         transform.localEulerAngles = new Vector3(0, yaw, 0);
 
+        //walking around
         if (controller.isGrounded) {
             moveDirection = new Vector3(Input.GetAxis("Horizontal"), 0, Input.GetAxis("Vertical"));
             moveDirection = transform.TransformDirection(moveDirection);
@@ -44,6 +46,7 @@ public class PlayerMovement : MonoBehaviour {
         moveDirection.y -= gravity * Time.deltaTime;
         controller.Move(moveDirection * Time.deltaTime);
 
+        //looking
         Ray ray = new Ray(transform.GetChild(0).position, transform.GetChild(0).forward);
         RaycastHit hit;
         if (Physics.Raycast(ray, out hit, 4, LayerMask.GetMask("Terrain"))) {//add layermask

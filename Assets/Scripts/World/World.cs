@@ -5,12 +5,11 @@ using UnityEngine;
 
 public class World : MonoBehaviour {
 
-    public int seed;
-
     public static World instance;
 
+    public int seed;
+
     public Transform target;
-    public Transform tester;
     public int renderRange = 5;
 
     Vector2 playerPosition;
@@ -24,9 +23,14 @@ public class World : MonoBehaviour {
     Dictionary<Vector2, Chunk> chunks = new Dictionary<Vector2, Chunk>();
     List<Chunk> chunksSeen = new List<Chunk>();
     List<Chunk> chunksToUpdate = new List<Chunk>();
-    List<Chunk> updateChunks = new List<Chunk>();
 
     public Noise noise;
+
+    Thread generationThread;
+    public bool doneGenerating = false;
+    bool generating = false;
+
+    bool InitialLevelLoaded = false;
 
     void Awake() {
         instance = this;
@@ -38,19 +42,17 @@ public class World : MonoBehaviour {
     }
 
     void Update() {
+        //convert position of player to Vector2 and Vector2 of currently visiting chunk
         playerPosition = new Vector2(target.position.x, target.position.z);
         playerChunkPosition = new Vector2(Mathf.FloorToInt(playerPosition.x / maxChunkSize), Mathf.FloorToInt(playerPosition.y / maxChunkSize));
 
+        //only generate when going into a new chunk
         if (playerChunkPosition != prevPlayerChunkPosition) {
-            UpdateChunks();//this makes all the new chunks, because they do'nt excist yet;
-            UpdateChunks();//this creates the mesh for all the chunks in view
+            UpdateChunks(); //this makes all the new chunks, because they don't excist yet;
+            UpdateChunks(); //this creates the mesh for all the chunks in view
         }
 
         prevPlayerChunkPosition = playerChunkPosition;
-
-        foreach (Chunk c in updateChunks) {
-            c.UpdateChunk();
-        }
     }
 
 
@@ -61,17 +63,42 @@ public class World : MonoBehaviour {
             }
         }
 
-        if(chunksToUpdate.Count > 0) {
-            
-            chunksToUpdate[0].SetVisible(true);
+        //when thread is done generating for chunk -> reset
+        if (doneGenerating) {
+            chunksToUpdate[0].FinalizeChunk();
+
             chunksToUpdate.RemoveAt(0);
+
+            doneGenerating = false;
+            generating = false;
+        }
+
+        //when nog generating mesh for chunk and list has new chunks to update, update
+        if(chunksToUpdate.Count > 0 && !generating) {
+
+            chunksToUpdate[0].GetChunkObject().SetActive(true);
+            if (chunksToUpdate[0].dirty) {
+                generationThread = new Thread(chunksToUpdate[0].GenerateMesh);
+                generationThread.Start();
+            }
+            generating = true;
+
+        }
+
+        //InitialLevelLoaded will be true when all initial chunks are generated
+        if (!InitialLevelLoaded && chunksToUpdate.Count == 0) {
+            if (chunks.Count > 0) {
+                Debug.Log("yey");
+                InitialLevelLoaded = true;
+            }
         }
     } 
 
     void UpdateChunks() {
+        //when chunks are not in view, make them invisible
         foreach (Chunk chunk in chunksSeen) {
             if(!chunk.InView(playerPosition))
-                chunk.SetVisible(false);
+                chunk.GetChunkObject().SetActive(false);
         }
         chunksSeen.Clear();
 
@@ -80,18 +107,18 @@ public class World : MonoBehaviour {
                 Vector2 viewedChunkPos = new Vector2(playerChunkPosition.x + xOffset, playerChunkPosition.y + yOffset);
 
                 if (chunks.ContainsKey(viewedChunkPos)) {
+                    //make visible when not visible
                     if(chunks[viewedChunkPos].InView(playerPosition) && !chunks[viewedChunkPos].IsVisible()){
-                        //chunks[viewedChunkPos].SetVisible(true);
                         chunksToUpdate.Add(chunks[viewedChunkPos]);
-                        updateChunks.Add(chunks[viewedChunkPos]);
                     }
 
+                    //already visible chunks add to list, so they won't get updated
                     if (chunks[viewedChunkPos].IsVisible()) {
-                        chunksSeen.Add(chunks[viewedChunkPos]);
-                        
+                        chunksSeen.Add(chunks[viewedChunkPos]); 
                     }
                 }
                 else {
+                    //add new chunk to Dictionary
                     Chunk c = new Chunk(this, viewedChunkPos, transform);
                     chunks.Add(viewedChunkPos, c);
                 }
@@ -99,6 +126,9 @@ public class World : MonoBehaviour {
         }
     }
 
+    /// <summary>
+    /// Change a block's data at a given position in world space
+    /// </summary>
     public void SetBlock(Vector3 worldPos, int i) {
         worldPos += new Vector3(-1, -1, -1);
         Block block = GetBlock(worldPos);
@@ -115,28 +145,20 @@ public class World : MonoBehaviour {
 
         Block[,,] neighbours = new Block[3, 3, 3];
         block.chunk.GetNeighbourBlocks(neighbours, block);
-        List<Chunk> dirtyChunks = new List<Chunk>();
 
         foreach (Block neighbour in neighbours) {
             if (neighbour != null) {
-                if (!dirtyChunks.Contains(neighbour.chunk)) {
-                    dirtyChunks.Add(neighbour.chunk);
+                if (!chunksToUpdate.Contains(neighbour.chunk)) {
+                    neighbour.chunk.dirty = true;
+                    chunksToUpdate.Add(neighbour.chunk);
                 }
             }
         }
-
-        foreach (Chunk chunk in dirtyChunks) {
-            chunk.UpdateMesh();
-        }
-
-        dirtyChunks.Clear();
     }
 
-    [ContextMenu("Test")]
-    public void ChangeBlock() {
-        SetBlock(tester.position, 0);
-    }
-
+    /// <summary>
+    /// Get Chunk based on world position
+    /// </summary>
     public Chunk GetChunk(Vector3 worldPos) {
         int posX = Mathf.FloorToInt(worldPos.x / maxChunkSize);
         int posY = Mathf.FloorToInt(worldPos.z / maxChunkSize);
@@ -144,6 +166,9 @@ public class World : MonoBehaviour {
         return GetChunk(posX, posY);
     }
 
+    /// <summary>
+    /// Get Chunk based on chunk's position, with check
+    /// </summary>
     public Chunk GetChunk(int posX, int posY) {
         if (chunks.ContainsKey(new Vector2(posX, posY))) {
             return chunks[new Vector2(posX, posY)];
@@ -151,10 +176,16 @@ public class World : MonoBehaviour {
         return null;
     }
 
+    /// <summary>
+    /// Get Chunk based on chunk's position, without check
+    /// </summary>
     public Chunk GetChunkDirectly(int posX, int posY) {
         return chunks[new Vector2(posX, posY)];
     }
 
+    /// <summary>
+    /// Get block based on world position, need to find chunk
+    /// </summary>
     public Block GetBlock(Vector3 worldPos) {
         Chunk chunk = GetChunk(worldPos);
 
@@ -164,6 +195,9 @@ public class World : MonoBehaviour {
         return GetBlock(worldPos, chunk);
     }
 
+    /// <summary>
+    /// Get block based on world position, already knowing chunk
+    /// </summary>
     public Block GetBlock(Vector3 worldPos, Chunk chunk) {
         int posX = Mathf.FloorToInt(worldPos.x - (chunk.GetPosition().x * maxChunkSize));
         int posY = Mathf.FloorToInt(worldPos.y);

@@ -915,11 +915,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   seed: 255
   target: {fileID: 1685741545}
-  tester: {fileID: 457669668}
-  renderRange: 6
+  renderRange: 5
   maxChunkSize: 16
-  maxHeight: 10
+  maxHeight: 32
   sizeOfBlock: 1
+  doneGenerating: 0
 --- !u!4 &2043337102
 Transform:
   m_ObjectHideFlags: 0

@@ -9,6 +9,7 @@ public class Block {
     public Vector3 positionInChunk;
     public Chunk chunk;
     public int code;
+    public int colorCode;
 
     public Block(int d, Vector3 pos, Chunk c) {
         data = d;
@@ -17,7 +18,7 @@ public class Block {
     }
 
     public Vector3 GetWorldPosition() {
-        return new Vector3(chunk.GetPosition().x * chunk.worldObj.maxChunkSize + positionInChunk.x, positionInChunk.y, chunk.GetPosition().y * chunk.worldObj.maxChunkSize + positionInChunk.z);
+        return new Vector3(chunk.GetPosition().x * chunk.GetWorldObj().maxChunkSize + positionInChunk.x, positionInChunk.y, chunk.GetPosition().y * chunk.GetWorldObj().maxChunkSize + positionInChunk.z);
     }
 
 
