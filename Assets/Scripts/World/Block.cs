@@ -8,6 +8,7 @@ public class Block {
     public int data;
     public Vector3 positionInChunk;
     public Chunk chunk;
+    public int code;
 
     public Block(int d, Vector3 pos, Chunk c) {
         data = d;
