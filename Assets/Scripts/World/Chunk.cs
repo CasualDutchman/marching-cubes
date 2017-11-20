@@ -360,26 +360,51 @@ public class Chunk {
                         case 32: AddFaces(new int[] { 1, 3, 6 }); break;
                         case 34: AddFaces(new int[] { 1, 3, 11, 1, 11, 9 }); break;
                         case 48: AddFaces(new int[] { 1, 2, 7, 1, 7, 6}); break;
+                        case 49: AddFaces(new int[] { 1, 2, 10, 1, 10, 11, 1, 11, 6}); break;
+                        case 50: AddFaces(new int[] { 9, 1, 2, 9, 2, 7, 9, 7, 11 }); break;
                         case 51: AddFaces(new int[] { 1, 2, 10, 1, 10, 9 }); break;
+                        case 55: AddFaces(new int[] { 9, 1, 2, 9, 2, 5, 9, 5, 8 }); break;
                         case 64: AddFaces(new int[] { 2, 0, 5 }); break;
                         case 68: AddFaces(new int[] { 2, 0, 8, 2, 8, 10 }); break;
                         case 80: AddFaces(new int[] { 0, 5, 3, 3, 5, 7}); break;
+                        case 81: AddFaces(new int[] { 3, 0, 11, 11, 0, 5, 11, 5, 10 }); break;
+                        case 84: AddFaces(new int[] { 3, 0, 8, 3, 8, 10, 3, 10, 7 }); break;
                         case 85: AddFaces(new int[] { 3, 0, 8, 3, 8, 11 }); break;
+                        case 93: AddFaces(new int[] { 10, 3, 0, 11, 0, 4, 11, 4, 9 }); break;
                         case 96: AddFaces(new int[] { 6, 1, 5, 1, 0, 5, 5, 2, 6, 2, 3, 6 }); break;
                         case 112: AddFaces(new int[] { 0, 5, 1, 1, 5, 6, 5, 7, 6 }); break;
                         case 113: AddFaces(new int[] { 1, 0, 6, 6, 0, 5, 6, 5, 10, 6, 10, 11 }); break;
+                        case 115: AddFaces(new int[] { 1, 0, 5, 1, 5, 10, 1, 10, 9 }); break;
+                        case 116: AddFaces(new int[] { 0, 8, 11, 0, 11, 6, 0, 6, 1 }); break;
+                        case 119: AddFaces(new int[] { 0, 8, 1, 8, 9, 1 }); break;
                         case 128: AddFaces(new int[] { 0, 1, 4 }); break;
                         case 136: AddFaces(new int[] { 0, 1, 9, 0, 9, 8 }); break;
+                        case 144: AddFaces(new int[] { 4, 0, 2, 4, 2, 7, 7, 3, 1, 7, 1, 4 }); break;
                         case 160: AddFaces(new int[] { 0, 3, 4, 4, 3, 6}); break;
+                        case 162: AddFaces(new int[] { 0, 3, 11, 0, 11, 9, 0, 9, 4 }); break;
+                        case 168: AddFaces(new int[] { 8, 0, 3, 8, 3, 6, 8, 6, 9 }); break;
                         case 170: AddFaces(new int[] { 0, 3, 11, 0, 11, 8 }); break;
+                        case 171: AddFaces(new int[] { 8, 0, 3, 8, 3, 7, 8, 7, 10 }); break;
                         case 176: AddFaces(new int[] { 4, 0, 2, 4, 2, 7, 4, 7, 6 }); break;
                         case 178: AddFaces(new int[] { 4, 0, 2, 4, 2, 7, 4, 7, 11, 4, 11, 9 }); break;
+                        case 179: AddFaces(new int[] { 2, 10, 9, 2, 9, 4, 2, 4, 0 }); break;
+                        case 186: AddFaces(new int[] { 0, 2, 7, 0, 7, 11, 0, 11, 8 }); break;
+                        case 187: AddFaces(new int[] { 8, 0, 2, 8, 2, 10 }); break;
                         case 192: AddFaces(new int[] { 4, 5, 2, 4, 2, 1 }); break;
+                        case 196: AddFaces(new int[] { 10, 2, 1, 10, 1, 4, 10, 4, 8 }); break;
+                        case 200: AddFaces(new int[] { 2, 1, 9, 2, 9, 8, 2, 8, 5}); break;
                         case 204: AddFaces(new int[] { 2, 1, 9, 2, 9, 10}); break;
+                        case 206: AddFaces(new int[] { 10, 2, 1, 10, 1, 6, 10, 6, 11 }); break;
                         case 208: AddFaces(new int[] { 3, 1, 7, 7, 1, 4, 7, 4, 5 }); break;
                         case 212: AddFaces(new int[] { 3, 1, 7, 7, 1, 4, 7, 4, 8, 7, 8, 10 }); break;
+                        case 213: AddFaces(new int[] { 3, 1, 4, 3, 4, 8, 3, 8, 11 }); break;
+                        case 220: AddFaces(new int[] { 1, 9, 10, 1, 10, 7, 1, 7, 3 }); break;
+                        case 221: AddFaces(new int[] { 9, 3, 1, 9, 11, 3 }); break;
                         case 224: AddFaces(new int[] { 4, 5, 6, 6, 5, 2, 6, 2, 3 }); break;
                         case 232: AddFaces(new int[] { 5, 2, 3, 5, 3, 6, 5, 6, 9, 5, 9, 8 }); break;
+                        case 234: AddFaces(new int[] { 3, 11, 8, 3, 8, 5, 3, 5, 2 }); break;
+                        case 236: AddFaces(new int[] { 2, 3, 6, 2, 6, 9, 2, 9, 10 }); break;
+                        case 238: AddFaces(new int[] { 11, 2, 3, 11, 10, 2 }); break;
                         case 240: AddFaces(new int[] { 4, 5, 7, 4, 7, 6 }); break;
                         case 241: AddFaces(new int[] { 4, 5, 6, 6, 5, 10, 6, 10, 11 }); break;
                         case 242: AddFaces(new int[] { 4, 5, 7, 4, 7, 11, 4, 11, 9 }); break;
@@ -389,11 +414,16 @@ public class Chunk {
                         case 246: AddFaces(new int[] { 4, 8, 9, 7, 11, 10 }); break;
                         case 247: AddFaces(new int[] { 4, 8, 9 }); break;
                         case 248: AddFaces(new int[] { 9, 8, 5, 9, 5, 6, 6, 5, 7 }); break;
+                        case 249: AddFaces(new int[] { 8, 5, 10, 11, 6, 9 }); break;
                         case 250: AddFaces(new int[] { 5, 7, 11, 5, 11, 8 }); break;
                         case 251: AddFaces(new int[] { 5, 10, 8 }); break;
                         case 252: AddFaces(new int[] { 7, 6, 9, 7, 9, 10 }); break;
                         case 253: AddFaces(new int[] { 6, 9, 11 }); break;
                         case 254: AddFaces(new int[] { 7, 11, 10 }); break;
+                    }
+
+                    if(tris.Count % 3 != 0) {
+                        Debug.Log(code);
                     }
                 }
             }
@@ -405,7 +435,15 @@ public class Chunk {
     /// </summary>
     public bool InView(Vector2 playerPos) {
         Vector2 centerPos = new Vector2(chunkObject.transform.position.x, chunkObject.transform.position.z) + new Vector2(worldObj.maxChunkSize / 2.0f, worldObj.maxChunkSize / 2.0f);
-        return Vector2.Distance(centerPos, playerPos) < worldObj.renderRange * worldObj.maxChunkSize;
+        return Vector2.Distance(centerPos, playerPos) <= worldObj.renderRange * worldObj.maxChunkSize;
+    }
+
+    /// <summary>
+    /// True when in view
+    /// </summary>
+    public bool InLoadingArea(Vector2 playerPos) {
+        Vector2 centerPos = new Vector2(chunkObject.transform.position.x, chunkObject.transform.position.z) + new Vector2(worldObj.maxChunkSize / 2.0f, worldObj.maxChunkSize / 2.0f);
+        return Vector2.Distance(centerPos, playerPos) <= (worldObj.renderRange + 2) * worldObj.maxChunkSize;
     }
 
     /// <summary>

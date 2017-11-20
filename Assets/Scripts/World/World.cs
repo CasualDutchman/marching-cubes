@@ -107,8 +107,15 @@ public class World : MonoBehaviour {
                 Vector2 viewedChunkPos = new Vector2(playerChunkPosition.x + xOffset, playerChunkPosition.y + yOffset);
 
                 if (chunks.ContainsKey(viewedChunkPos)) {
+                    if (!chunks[viewedChunkPos].InLoadingArea(playerPosition)) {
+                        print("Destroy");
+                        DestroyImmediate(chunks[viewedChunkPos].GetChunkObject());
+                        chunks.Remove(viewedChunkPos);
+                        continue;
+                    }
+
                     //make visible when not visible
-                    if(chunks[viewedChunkPos].InView(playerPosition) && !chunks[viewedChunkPos].IsVisible()){
+                    if (chunks[viewedChunkPos].InView(playerPosition) && !chunks[viewedChunkPos].IsVisible()){
                         chunksToUpdate.Add(chunks[viewedChunkPos]);
                     }
 
