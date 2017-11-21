@@ -15,6 +15,7 @@ public class Noise {
         seed = _seed;
     }
 
+
 	public float Value(int posX, int posY) {
         Random.InitState(seed);
 
