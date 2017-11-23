@@ -2,8 +2,8 @@
 //Day: 6
 
 /-	Procedural terrain (kinda minecraft meets simple marching cubes)
- -	Pathfinding (layered A*)
- -	Procedural content (Items based on smithing level)
+ -	Pathfinding* (layered A*)
+ -	Procedural content* (Items based on smithing level)
 
 
 1-	World save file
@@ -12,3 +12,4 @@
 3- 	Finish all marching cube code combos
 4-X	Threading
 5-	Unload chunks far away
+6-	Generate marching codes and marching cubes seperately

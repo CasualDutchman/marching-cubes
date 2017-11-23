@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Threading;
 using UnityEngine;
 
-public class World : MonoBehaviour {
+public class WorldBackup : MonoBehaviour {
 
-    public static World instance;
+    public static WorldBackup instance;
 
     public int seed;
 
@@ -123,7 +123,7 @@ public class World : MonoBehaviour {
                 }
                 else {
                     //add new chunk to Dictionary
-                    Chunk c = new Chunk(this, viewedChunkPos, transform);
+                    Chunk c = new Chunk(null /*this*/, viewedChunkPos, transform);
                     chunks.Add(viewedChunkPos, c);
                 }
             }
