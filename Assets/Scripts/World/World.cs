@@ -75,7 +75,11 @@ public class World : MonoBehaviour {
 
             chunksToUpdate[0].GetChunkObject().SetActive(true);
             if (chunksToUpdate[0].dirty) {
-                generationThread = new Thread(chunksToUpdate[0].GenerateMesh);
+                if (chunksToUpdate[0].hasMesh) {
+                    generationThread = new Thread(chunksToUpdate[0].UpdateMesh);
+                } else {
+                    generationThread = new Thread(chunksToUpdate[0].GenerateMesh);
+                }
                 generationThread.Start();
             }
             generating = true;
@@ -152,6 +156,8 @@ public class World : MonoBehaviour {
 
         foreach (Block neighbour in neighbours) {
             if (neighbour != null) {
+                neighbour.chunk.dirtyBlocks.Add(neighbour);
+
                 if (!chunksToUpdate.Contains(neighbour.chunk)) {
                     neighbour.chunk.dirty = true;
                     chunksToUpdate.Add(neighbour.chunk);
