@@ -23,6 +23,9 @@ public class ChunkBackup {
 
     //true when update for mesh is needed
     public bool dirty = true;
+    public List<Block> dirtyBlocks = new List<Block>();
+
+    public bool hasMesh = false;
 
     public ChunkBackup() { }
 
@@ -38,23 +41,7 @@ public class ChunkBackup {
 
         blocks = new Block[worldObj.maxChunkSize, worldObj.maxHeight, worldObj.maxChunkSize]; // instatiate the block array
 
-        //generate blocks
-        for (int x = 0; x < worldObj.maxChunkSize; x++) {
-            for (int y = 0; y < worldObj.maxHeight; y++) {
-                for (int z = 0; z < worldObj.maxChunkSize; z++) {
-                    //height value between 0 and 1 based on x and z
-                    float perlin = Noise.Value(worldObj.seed, Mathf.FloorToInt(position.x * worldObj.maxChunkSize + x), Mathf.FloorToInt(position.y * worldObj.maxChunkSize + z));
-
-                    //top of the height value
-                    int i = Mathf.FloorToInt((int)(worldObj.maxHeight / 3) + ((worldObj.maxHeight / 3) * perlin));
-
-                    //top layer = 1; 2 layers below that is 2; below that is 3; air is 0
-                    int data = y == 0 ? 2 : (y == i ? 1 : (y < i ? (y < i - 2 ? 3 : 2) : 0));
-
-                    blocks[x, y, z] = new Block(data, new Vector3(x, y, z), null);//this);
-                }
-            }
-        }
+        GenerateBlocks();
 
         //do not show the chunk, not updates from components needed
         chunkObject.SetActive(false);
@@ -71,6 +58,81 @@ public class ChunkBackup {
         worldObj.doneGenerating = true;
     }
 
+    public void UpdateMesh() {
+
+        Debug.Log("go");
+
+        Block[,,] neighbours = new Block[3, 3, 3];
+
+        int code = 0;
+
+        foreach (Block block in dirtyBlocks) {
+            int i = 0;
+            GetNeighbourBlocks(neighbours, block, out i);
+
+            if (i == 0) {
+                block.code = 0;
+                continue;
+            }
+
+            if (i == 25) { //maximum neighbours minus itself
+                block.code = 255;
+                continue;
+            }
+
+            Vector3 center = GetWorldPosition() + block.positionInChunk;
+
+            int[] colorMajority = new int[4];
+
+            for (int y2 = 0; y2 < 2; y2++) {
+                for (int z2 = 0; z2 < 2; z2++) {
+                    for (int x2 = 0; x2 < 2; x2++) {
+                        int j = 0;
+
+                        if (neighbours[x2, y2, z2] != null) {
+                            j = neighbours[x2, y2, z2].data == 0 ? 0 : 1;
+                        }
+
+                        if (j != 0) {
+                            colorMajority[neighbours[x2, y2, z2].data]++;
+                        }
+
+                        if (center.y + y2 <= 0) {
+                            j = 1;
+                        }
+
+                        code <<= 1;
+                        code |= j;
+                    }
+                }
+            }
+
+            int colorCode = 0;
+            int amount = 0;
+
+            for (i = 0; i < colorMajority.Length; i++) {
+                if (colorMajority[i] > amount) {
+                    colorCode = i;
+                    amount = colorMajority[i];
+                }
+            }
+
+            block.colorCode = colorCode;
+            block.code = code;
+            code = 0;
+        }
+
+        dirtyBlocks.Clear();
+
+        Debug.Log("end");
+
+        SetMarchingCubes(mesh); //create the mesh for the chunk based on the blocks data
+
+        Debug.Log("mesh");
+
+        worldObj.doneGenerating = true;
+    }
+
     /// <summary>
     /// Add all the information to the mesh
     /// </summary>
@@ -78,7 +140,7 @@ public class ChunkBackup {
         //add components if needed, otherwise get them
         if (!chunkObject.GetComponent<MeshFilter>()) {
             meshFilter = chunkObject.AddComponent<MeshFilter>();
-        }else {
+        } else {
             meshFilter = chunkObject.GetComponent<MeshFilter>();
         }
         if (!chunkObject.GetComponent<MeshRenderer>()) {
@@ -103,10 +165,16 @@ public class ChunkBackup {
         mesh.RecalculateNormals();
 
         //set components
+        meshFilter.mesh = null;
         meshFilter.mesh = mesh;
+        meshCollider.sharedMesh = null;
         meshCollider.sharedMesh = mesh;
 
         meshRenderer.material = Resources.Load<Material>("Material/WorldMaterial");
+
+        hasMesh = true;
+
+        Debug.Log("woohoo");
 
         //delete unnecessary data, it is no longer needed
         verts.Clear();
@@ -116,6 +184,28 @@ public class ChunkBackup {
         meshFilter = null;
         meshRenderer = null;
         meshCollider = null;
+    }
+
+    void GenerateBlocks() {
+        float[,] map = Noise.GetMap(worldObj.maxChunkSize, Mathf.FloorToInt(position.x * worldObj.maxChunkSize), Mathf.FloorToInt(position.y * worldObj.maxChunkSize));
+
+        for (int x = 0; x < worldObj.maxChunkSize; x++) {
+            for (int y = 0; y < worldObj.maxHeight; y++) {
+                for (int z = 0; z < worldObj.maxChunkSize; z++) {
+                    //height value between 0 and 1 based on x and z
+                    //float perlin = Noise.Value(worldObj.seed, Mathf.FloorToInt(position.x * worldObj.maxChunkSize + x), Mathf.FloorToInt(position.y * worldObj.maxChunkSize + z));
+                    float perlin = map[x, y];
+
+                    //top of the height value
+                    int i = Mathf.FloorToInt((int)(worldObj.maxHeight / 3) + ((worldObj.maxHeight / 3) * perlin));
+
+                    //top layer = 1; 2 layers below that is 2; below that is 3; air is 0
+                    int data = y == 0 ? 2 : (y == i ? 1 : (y < i ? (y < i - 2 ? 3 : 2) : 0));
+
+                    blocks[x, y, z] = new Block(data, new Vector3(x, y, z), null);
+                }
+            }
+        }
     }
 
     /// <summary>
@@ -158,7 +248,7 @@ public class ChunkBackup {
                                     j = neighbours[x2, y2, z2].data == 0 ? 0 : 1;
                                 }
 
-                                if(j != 0) {
+                                if (j != 0) {
                                     colorMajority[neighbours[x2, y2, z2].data]++;
                                 }
 
@@ -213,7 +303,7 @@ public class ChunkBackup {
             for (int z = -1; z <= 1; z++) {
                 for (int x = -1; x <= 1; x++) {
 
-                    if(x == 0 && y == 0 && z == 0) {
+                    if (x == 0 && y == 0 && z == 0) {
                         neighbours[1, 1, 1] = block;
                         continue;
                     }
@@ -226,10 +316,10 @@ public class ChunkBackup {
                     int chunkX = (int)position.x;
                     int chunkY = (int)position.y;
 
-                    Chunk checkChunk = null;//this;
+                    Chunk checkChunk = null;
 
                     //dont go further is below 0 or above max height level
-                    if(checkY < 0 || checkY >= worldObj.maxHeight) {
+                    if (checkY < 0 || checkY >= worldObj.maxHeight) {
                         continue;
                     }
 
@@ -258,21 +348,19 @@ public class ChunkBackup {
                         //if the chunk check position is the same as previous, use the previous chunk
                         if (chunkX == prevCheckCunkPosX && chunkY == prevCheckCunkPosY) {
                             checkChunk = prevCheckedChunk;
-                        } 
-                        else {//check for the chunk in the world
-                            checkChunk = worldObj.GetChunkDirectly(chunkX, chunkY);
+                        } else {//check for the chunk in the world
+                            checkChunk = worldObj.GetChunk(chunkX, chunkY);
                             prevCheckedChunk = checkChunk;
                             prevCheckCunkPosX = chunkX;
                             prevCheckCunkPosY = chunkY;
                         }
                     }
 
-                    //add neighbour
                     Block neighbour = checkChunk.GetBlock(checkX, checkY, checkZ);
-                    
+
                     neighbours[x + 1, y + 1, z + 1] = neighbour;
-                    
-                    if(neighbour.data != 0) {
+
+                    if (neighbour.data != 0) {
                         i++;
                     }
                 }
@@ -310,9 +398,9 @@ public class ChunkBackup {
             new Vector2(0.15f, 0.15f)
         };
 
-        for (int y = 0; y < worldObj.maxHeight ; y++) {
-            for (int z = 0; z < worldObj.maxChunkSize ; z++) {
-                for (int x = 0; x < worldObj.maxChunkSize ; x++) {
+        for (int y = 0; y < worldObj.maxHeight; y++) {
+            for (int z = 0; z < worldObj.maxChunkSize; z++) {
+                for (int x = 0; x < worldObj.maxChunkSize; x++) {
                     Vector3 marchingCubeBegin = GetWorldPosition() + (new Vector3(x, y, z) * worldObj.sizeOfBlock);
 
                     int code = blocks[x, y, z].code;
@@ -360,10 +448,10 @@ public class ChunkBackup {
                         case 17: AddFaces(new int[] { 3, 2, 10, 3, 10, 11 }); break;
                         case 18: AddFaces(new int[] { 9, 6, 11, 3, 2, 7 }); break;
                         case 19: AddFaces(new int[] { 9, 2, 10, 9, 6, 3, 9, 3, 2 }); break;
-                        case 20: AddFaces(new int[] { 3, 2, 7, 10, 5, 8}); break;
+                        case 20: AddFaces(new int[] { 3, 2, 7, 10, 5, 8 }); break;
                         case 21: AddFaces(new int[] { 11, 3, 8, 8, 3, 2, 8, 2, 5 }); break;
                         case 22: AddFaces(new int[] { 3, 2, 7, 10, 5, 8, 9, 6, 11 }); break;
-                        case 23: AddFaces(new int[] { 6, 3, 2, 6, 2, 5, 6, 5, 8, 6, 8, 9}); break;
+                        case 23: AddFaces(new int[] { 6, 3, 2, 6, 2, 5, 6, 5, 8, 6, 8, 9 }); break;
                         case 24: AddFaces(new int[] { 3, 2, 7, 8, 4, 9 }); break;
                         case 25: AddFaces(new int[] { 8, 4, 9, 11, 3, 2, 11, 2, 10 }); break;
                         case 26: AddFaces(new int[] { 3, 2, 7, 8, 4, 6, 8, 6, 11 }); break;
@@ -383,13 +471,13 @@ public class ChunkBackup {
                         case 40: AddFaces(new int[] { 1, 3, 6, 8, 4, 9 }); break;
                         case 41: AddFaces(new int[] { 1, 3, 6, 8, 4, 9, 11, 7, 10 }); break;
                         case 42: AddFaces(new int[] { 8, 3, 11, 8, 4, 1, 8, 1, 3 }); break;
-                        case 43: AddFaces(new int[] { 4, 10, 8, 4, 7, 10, 4, 3, 7, 4, 1, 3}); break;
+                        case 43: AddFaces(new int[] { 4, 10, 8, 4, 7, 10, 4, 3, 7, 4, 1, 3 }); break;
                         case 44: AddFaces(new int[] { 1, 3, 6, 10, 5, 4, 10, 4, 9 }); break;
                         case 45: AddFaces(new int[] { 1, 3, 6, 7, 9, 11, 7, 4, 9, 7, 5, 4 }); break;
                         case 46: AddFaces(new int[] { 1, 5, 4, 1, 3, 5, 5, 3, 10, 10, 3, 11 }); break;
                         case 47: AddFaces(new int[] { 1, 3, 4, 4, 3, 7, 4, 7, 5 }); break;
-                        case 48: AddFaces(new int[] { 1, 2, 7, 1, 7, 6}); break;
-                        case 49: AddFaces(new int[] { 1, 2, 10, 1, 10, 11, 1, 11, 6}); break;
+                        case 48: AddFaces(new int[] { 1, 2, 7, 1, 7, 6 }); break;
+                        case 49: AddFaces(new int[] { 1, 2, 10, 1, 10, 11, 1, 11, 6 }); break;
                         case 50: AddFaces(new int[] { 9, 1, 2, 9, 2, 7, 9, 7, 11 }); break;
                         case 51: AddFaces(new int[] { 1, 2, 10, 1, 10, 9 }); break;
                         case 52: AddFaces(new int[] { 10, 5, 8, 6, 1, 7, 1, 2, 7 }); break;
@@ -399,31 +487,31 @@ public class ChunkBackup {
                         case 56: AddFaces(new int[] { 8, 4, 9, 6, 1, 2, 6, 2, 7 }); break;
                         case 57: AddFaces(new int[] { 8, 4, 8, 1, 2, 10, 1, 10, 11, 1, 11, 6 }); break;
                         case 58: AddFaces(new int[] { 1, 2, 4, 4, 2, 8, 8, 2, 7, 8, 7, 11 }); break;
-                        case 59: AddFaces(new int[] { 1, 2, 10, 4, 1, 10, 4, 10, 8  }); break;
+                        case 59: AddFaces(new int[] { 1, 2, 10, 4, 1, 10, 4, 10, 8 }); break;
                         case 60: AddFaces(new int[] { 6, 1, 2, 6, 2, 7, 10, 5, 4, 10, 4, 9 }); break;
                         case 61: AddFaces(new int[] { 11, 6, 9, 4, 1, 2, 4, 2, 5 }); break;
                         case 62: AddFaces(new int[] { 10, 7, 11, 4, 1, 2, 4, 2, 5 }); break;
                         case 63: AddFaces(new int[] { 4, 1, 2, 4, 2, 5 }); break;
                         case 64: AddFaces(new int[] { 2, 0, 5 }); break;
-                        case 65: AddFaces(new int[] { 11, 7, 10, 2, 0, 5}); break;
-                        case 66: AddFaces(new int[] { 2, 0, 5, 9, 6, 11}); break;
+                        case 65: AddFaces(new int[] { 11, 7, 10, 2, 0, 5 }); break;
+                        case 66: AddFaces(new int[] { 2, 0, 5, 9, 6, 11 }); break;
                         case 67: AddFaces(new int[] { 2, 0, 5, 9, 6, 7, 9, 7, 10 }); break;
                         case 68: AddFaces(new int[] { 2, 0, 8, 2, 8, 10 }); break;
                         case 69: AddFaces(new int[] { 11, 0, 8, 7, 2, 0, 7, 0, 11 }); break;
                         case 70: AddFaces(new int[] { 9, 6, 11, 10, 2, 0, 10, 0, 8 }); break;
                         case 71: AddFaces(new int[] { 6, 7, 9, 9, 7, 8, 2, 8, 7, 2, 0, 8 }); break;
                         case 72: AddFaces(new int[] { 2, 0, 5, 8, 4, 9 }); break;
-                        case 73: AddFaces(new int[] { 8, 4, 9, 11, 7, 10, 2, 0, 5}); break;
-                        case 74: AddFaces(new int[] { 2, 0, 5, 8, 4, 6, 8, 6, 11}); break;
+                        case 73: AddFaces(new int[] { 8, 4, 9, 11, 7, 10, 2, 0, 5 }); break;
+                        case 74: AddFaces(new int[] { 2, 0, 5, 8, 4, 6, 8, 6, 11 }); break;
                         case 75: AddFaces(new int[] { 2, 0, 5, 4, 6, 7, 8, 4, 7, 8, 7, 10 }); break;
                         case 76: AddFaces(new int[] { 10, 2, 9, 2, 0, 9, 0, 4, 9 }); break;
                         case 77: AddFaces(new int[] { 2, 0, 4, 2, 4, 9, 2, 9, 11, 2, 11, 7 }); break;
-                        case 78: AddFaces(new int[] { 6, 0, 4, 2, 0, 6, 2, 6, 11, 2, 11, 10}); break;
+                        case 78: AddFaces(new int[] { 6, 0, 4, 2, 0, 6, 2, 6, 11, 2, 11, 10 }); break;
                         case 79: AddFaces(new int[] { 6, 7, 4, 7, 2, 4, 2, 4, 0 }); break;
-                        case 80: AddFaces(new int[] { 0, 5, 3, 3, 5, 7}); break;
+                        case 80: AddFaces(new int[] { 0, 5, 3, 3, 5, 7 }); break;
                         case 81: AddFaces(new int[] { 3, 0, 11, 11, 0, 5, 11, 5, 10 }); break;
                         case 82: AddFaces(new int[] { 9, 6, 11, 7, 3, 0, 7, 0, 5 }); break;
-                        case 83: AddFaces(new int[] { 3, 0, 6, 6, 0, 9, 9, 0, 5, 9, 5, 10}); break;
+                        case 83: AddFaces(new int[] { 3, 0, 6, 6, 0, 9, 9, 0, 5, 9, 5, 10 }); break;
                         case 84: AddFaces(new int[] { 3, 0, 8, 3, 8, 10, 3, 10, 7 }); break;
                         case 85: AddFaces(new int[] { 3, 0, 8, 3, 8, 11 }); break;
                         case 86: AddFaces(new int[] { 9, 6, 11, 3, 0, 8, 7, 3, 8, 7, 8, 0 }); break;
@@ -450,7 +538,8 @@ public class ChunkBackup {
                         case 128: AddFaces(new int[] { 0, 1, 4 }); break;
                         case 136: AddFaces(new int[] { 0, 1, 9, 0, 9, 8 }); break;
                         case 144: AddFaces(new int[] { 4, 0, 1, 7, 3, 2 }); break;
-                        case 160: AddFaces(new int[] { 0, 3, 4, 4, 3, 6}); break;
+                        case 159: AddFaces(new int[] { 1, 6, 3, 2, 5, 0 }); break;
+                        case 160: AddFaces(new int[] { 0, 3, 4, 4, 3, 6 }); break;
                         case 162: AddFaces(new int[] { 0, 3, 11, 0, 11, 9, 0, 9, 4 }); break;
                         case 168: AddFaces(new int[] { 8, 0, 3, 8, 3, 6, 8, 6, 9 }); break;
                         case 170: AddFaces(new int[] { 0, 3, 11, 0, 11, 8 }); break;
@@ -462,8 +551,8 @@ public class ChunkBackup {
                         case 187: AddFaces(new int[] { 8, 0, 2, 8, 2, 10 }); break;
                         case 192: AddFaces(new int[] { 4, 5, 2, 4, 2, 1 }); break;
                         case 196: AddFaces(new int[] { 10, 2, 1, 10, 1, 4, 10, 4, 8 }); break;
-                        case 200: AddFaces(new int[] { 2, 1, 9, 2, 9, 8, 2, 8, 5}); break;
-                        case 204: AddFaces(new int[] { 2, 1, 9, 2, 9, 10}); break;
+                        case 200: AddFaces(new int[] { 2, 1, 9, 2, 9, 8, 2, 8, 5 }); break;
+                        case 204: AddFaces(new int[] { 2, 1, 9, 2, 9, 10 }); break;
                         case 206: AddFaces(new int[] { 10, 2, 1, 10, 1, 6, 10, 6, 11 }); break;
                         case 208: AddFaces(new int[] { 3, 1, 7, 7, 1, 4, 7, 4, 5 }); break;
                         case 212: AddFaces(new int[] { 3, 1, 7, 7, 1, 4, 7, 4, 8, 7, 8, 10 }); break;
@@ -473,18 +562,21 @@ public class ChunkBackup {
                         case 224: AddFaces(new int[] { 4, 5, 6, 6, 5, 2, 6, 2, 3 }); break;
                         case 232: AddFaces(new int[] { 5, 2, 3, 5, 3, 6, 5, 6, 9, 5, 9, 8 }); break;
                         case 234: AddFaces(new int[] { 3, 11, 8, 3, 8, 5, 3, 5, 2 }); break;
+                        case 235: AddFaces(new int[] { 3, 5, 2, 3, 8, 5, 3, 10, 8, 3, 7, 10 }); break;
                         case 236: AddFaces(new int[] { 2, 3, 6, 2, 6, 9, 2, 9, 10 }); break;
+                        case 237: AddFaces(new int[] { 2, 9, 11, 2, 11, 7, 2, 6, 9, 2, 3, 6 }); break;
                         case 238: AddFaces(new int[] { 11, 2, 3, 11, 10, 2 }); break;
+                        case 239: AddFaces(new int[] { 2, 3, 7 }); break;
                         case 240: AddFaces(new int[] { 4, 5, 7, 4, 7, 6 }); break;
                         case 241: AddFaces(new int[] { 4, 5, 6, 6, 5, 10, 6, 10, 11 }); break;
                         case 242: AddFaces(new int[] { 4, 5, 7, 4, 7, 11, 4, 11, 9 }); break;
                         case 243: AddFaces(new int[] { 4, 5, 10, 4, 10, 9 }); break;
                         case 244: AddFaces(new int[] { 7, 6, 4, 7, 4, 8, 7, 8, 10 }); break;
-                        case 245: AddFaces(new int[] { 4, 8, 6, 6, 8, 11}); break;
-                        case 246: AddFaces(new int[] { 4, 8, 9, 7, 11, 10 }); break;
+                        case 245: AddFaces(new int[] { 4, 8, 6, 6, 8, 11 }); break;
+                        case 246: AddFaces(new int[] { 4, 7, 11, 4, 11, 9, 4, 10, 7, 4, 8, 10 }); break;
                         case 247: AddFaces(new int[] { 4, 8, 9 }); break;
                         case 248: AddFaces(new int[] { 9, 8, 5, 9, 5, 6, 6, 5, 7 }); break;
-                        case 249: AddFaces(new int[] { 8, 5, 10, 11, 6, 9 }); break;
+                        case 249: AddFaces(new int[] { 6, 5, 10, 6, 10, 11, 5, 6, 9, 5, 9, 8 }); break;
                         case 250: AddFaces(new int[] { 5, 7, 11, 5, 11, 8 }); break;
                         case 251: AddFaces(new int[] { 5, 10, 8 }); break;
                         case 252: AddFaces(new int[] { 7, 6, 9, 7, 9, 10 }); break;
@@ -492,7 +584,7 @@ public class ChunkBackup {
                         case 254: AddFaces(new int[] { 7, 11, 10 }); break;
                     }
 
-                    if(tris.Count % 3 != 0) {
+                    if (tris.Count % 3 != 0) {
                         Debug.Log(code);
                     }
                 }
@@ -504,16 +596,16 @@ public class ChunkBackup {
     /// True when in view
     /// </summary>
     public bool InView(Vector2 playerPos) {
-        Vector2 centerPos = new Vector2(chunkObject.transform.position.x, chunkObject.transform.position.z) + new Vector2(worldObj.maxChunkSize / 2.0f, worldObj.maxChunkSize / 2.0f);
-        return Vector2.Distance(centerPos, playerPos) <= worldObj.renderRange * worldObj.maxChunkSize;
+        Vector2 centerPos = new Vector2(chunkObject.transform.position.x, chunkObject.transform.position.z) + new Vector2(worldObj.maxChunkSize * 0.5f, worldObj.maxChunkSize * 0.5f);
+        return Vector2.Distance(centerPos, playerPos) < (worldObj.renderRange - 1) * worldObj.maxChunkSize;
     }
 
     /// <summary>
     /// True when in view
     /// </summary>
     public bool InLoadingArea(Vector2 playerPos) {
-        Vector2 centerPos = new Vector2(chunkObject.transform.position.x, chunkObject.transform.position.z) + new Vector2(worldObj.maxChunkSize / 2.0f, worldObj.maxChunkSize / 2.0f);
-        return Vector2.Distance(centerPos, playerPos) <= (worldObj.renderRange + 2) * worldObj.maxChunkSize;
+        Vector2 centerPos = new Vector2(chunkObject.transform.position.x, chunkObject.transform.position.z) + new Vector2(worldObj.maxChunkSize * 0.5f, worldObj.maxChunkSize * 0.5f);
+        return Vector2.Distance(centerPos, playerPos) <= (worldObj.renderRange + 1) * worldObj.maxChunkSize;
     }
 
     /// <summary>

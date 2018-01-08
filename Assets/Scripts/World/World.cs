@@ -7,6 +7,8 @@ public class World : MonoBehaviour {
 
     public static World instance;
 
+    public bool useThreading = true;
+
     public int seed;
 
     public Transform target;
@@ -60,6 +62,22 @@ public class World : MonoBehaviour {
             }
         }
 
+        //when nog generating mesh for chunk and list has new chunks to update, update
+        if (chunksToUpdate.Count > 0 && !generating) {
+
+            chunksToUpdate[0].GetChunkObject().SetActive(true);
+            if (chunksToUpdate[0].dirty) {
+                if (useThreading) {
+                    generationThread = new Thread(chunksToUpdate[0].GenerateMesh);
+                    generationThread.Start();
+                } else {
+                    chunksToUpdate[0].GenerateMesh();
+                }
+            }
+            generating = true;
+
+        }
+
         //when thread is done generating for chunk -> reset
         if (doneGenerating) {
             chunksToUpdate[0].FinalizeChunk();
@@ -70,26 +88,19 @@ public class World : MonoBehaviour {
             generating = false;
         }
 
-        //when nog generating mesh for chunk and list has new chunks to update, update
-        if(chunksToUpdate.Count > 0 && !generating) {
-
-            chunksToUpdate[0].GetChunkObject().SetActive(true);
-            if (chunksToUpdate[0].dirty) {
-                if (chunksToUpdate[0].hasMesh) {
-                    generationThread = new Thread(chunksToUpdate[0].UpdateMesh);
-                } else {
-                    generationThread = new Thread(chunksToUpdate[0].GenerateMesh);
-                }
-                generationThread.Start();
-            }
-            generating = true;
-
-        }
-
         //InitialLevelLoaded will be true when all initial chunks are generated
         if (!InitialLevelLoaded && chunksToUpdate.Count == 0) {
             if (chunks.Count > 0) {
                 Debug.Log("yey");
+
+                Ray ray = new Ray(Vector3.zero + Vector3.up * (maxHeight + 1), Vector3.down);
+                RaycastHit hit;
+                if (Physics.Raycast(ray, out hit)) {
+                    target.position = hit.point + Vector3.up;
+                }
+                target.GetComponent<CharacterController>().enabled = true;
+                target.GetComponent<PlayerMovement>().enabled = true;
+
                 InitialLevelLoaded = true;
             }
         }
