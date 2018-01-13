@@ -123,7 +123,8 @@ public class WorldBackup : MonoBehaviour {
                 }
                 else {
                     //add new chunk to Dictionary
-                    Chunk c = new Chunk(null /*this*/, viewedChunkPos, transform);
+                    Chunk c = new Chunk(null /*this*/, viewedChunkPos);
+                    //StartCoroutine(c.GenerateBlocks(transform));
                     chunks.Add(viewedChunkPos, c);
                 }
             }

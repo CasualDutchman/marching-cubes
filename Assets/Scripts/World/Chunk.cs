@@ -29,22 +29,48 @@ public class Chunk {
 
     public Chunk() { }
 
-    public Chunk(World world, Vector2 pos, Transform parent) {
+    public Chunk(World world, Vector2 pos) {
         worldObj = world;
         position = pos;
 
+        //moved it to a coroutine
+    }
+
+    /// <summary>
+    /// First setup of blocks
+    /// </summary>
+    public void GenerateBlocks(Transform parent) {
         //create the chunk object in the scene
         chunkObject = new GameObject("chunk " + position.x + "/" + position.y);
         chunkObject.transform.position = new Vector3(position.x * worldObj.maxChunkSize, 0, position.y * worldObj.maxChunkSize) * worldObj.sizeOfBlock;
         chunkObject.transform.SetParent(parent);
         chunkObject.layer = LayerMask.NameToLayer("Terrain");
 
-        blocks = new Block[worldObj.maxChunkSize, worldObj.maxHeight, worldObj.maxChunkSize]; // instatiate the block array
-
-        GenerateBlocks();
-
-        //do not show the chunk, not updates from components needed
         chunkObject.SetActive(false);
+
+        //instantiate the block array
+        blocks = new Block[worldObj.maxChunkSize, worldObj.maxHeight, worldObj.maxChunkSize];
+
+        float[,] map = Noise.GetMap(worldObj.maxChunkSize, position.x * worldObj.maxChunkSize, position.y * worldObj.maxChunkSize);
+
+        for (int x = 0; x < worldObj.maxChunkSize; x++) {
+            for (int y = 0; y < worldObj.maxHeight; y++) {
+                for (int z = 0; z < worldObj.maxChunkSize; z++) {
+                    //height value between 0 and 1 based on x and z
+                    float perlin = map[x, z];
+
+                    //top of the height value
+                    int i = (int)(worldObj.maxHeight / 3) + (int)((worldObj.maxHeight / 3) * perlin);
+
+                    //top layer = 1; 2 layers below that is 2; below that is 3; air is 0
+                    int data = y == 0 ? 2 : (y == i ? 1 : (y < i ? (y < i - 2 ? 3 : 2) : 0));
+
+                    blocks[x, y, z] = new Block(data, new Vector3(x, y, z), this);
+                }
+            }
+        }
+
+        //yield return null;
     }
 
     /// <summary>
@@ -174,7 +200,7 @@ public class Chunk {
 
         hasMesh = true;
 
-        Debug.Log("woohoo");
+        //Debug.Log("Chunk Done Loading");
 
         //delete unnecessary data, it is no longer needed
         verts.Clear();
@@ -184,28 +210,6 @@ public class Chunk {
         meshFilter = null;
         meshRenderer = null;
         meshCollider = null;
-    }
-
-    void GenerateBlocks() {
-        float[,] map = Noise.GetMap(worldObj.maxChunkSize, Mathf.FloorToInt(position.x * worldObj.maxChunkSize), Mathf.FloorToInt(position.y * worldObj.maxChunkSize));
-
-        for (int x = 0; x < worldObj.maxChunkSize; x++) {
-            for (int y = 0; y < worldObj.maxHeight; y++) {
-                for (int z = 0; z < worldObj.maxChunkSize; z++) {
-                    //height value between 0 and 1 based on x and z
-                    //float perlin = Noise.Value(worldObj.seed, Mathf.FloorToInt(position.x * worldObj.maxChunkSize + x), Mathf.FloorToInt(position.y * worldObj.maxChunkSize + z));
-                    float perlin = map[x, z];
-
-                    //top of the height value
-                    int i = Mathf.FloorToInt((int)(worldObj.maxHeight / 3) + ((worldObj.maxHeight / 3) * perlin));
-
-                    //top layer = 1; 2 layers below that is 2; below that is 3; air is 0
-                    int data = y == 0 ? 2 : (y == i ? 1 : (y < i ? (y < i - 2 ? 3 : 2) : 0));
-
-                    blocks[x, y, z] = new Block(data, new Vector3(x, y, z), this);
-                }
-            }
-        }
     }
 
     /// <summary>

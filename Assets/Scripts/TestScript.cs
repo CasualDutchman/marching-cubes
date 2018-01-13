@@ -154,7 +154,7 @@ public class TestScript : MonoBehaviour {
             return true;
         };
 
-        //All possible combinations of the block
+        //All possible combinations of the block (not complete)
         switch (code) {
             //case : AddFaces(new int[] {  }); break; // template
             case 1: AddFaces(new int[] { 11, 7, 10 }); break;

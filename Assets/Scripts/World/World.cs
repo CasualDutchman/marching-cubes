@@ -62,7 +62,7 @@ public class World : MonoBehaviour {
             }
         }
 
-        //when nog generating mesh for chunk and list has new chunks to update, update
+        //when not generating mesh for chunk and list has new chunks to update, update
         if (chunksToUpdate.Count > 0 && !generating) {
 
             chunksToUpdate[0].GetChunkObject().SetActive(true);
@@ -138,7 +138,9 @@ public class World : MonoBehaviour {
                 }
                 else {
                     //add new chunk to Dictionary
-                    Chunk c = new Chunk(this, viewedChunkPos, transform);
+                    Chunk c = new Chunk(this, viewedChunkPos);
+                    //StartCoroutine(c.GenerateBlocks(transform));
+                    c.GenerateBlocks(transform);
                     chunks.Add(viewedChunkPos, c);
                 }
             }
