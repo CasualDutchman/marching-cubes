@@ -2,14 +2,13 @@
 using System.Collections.Generic;
 using System.Threading;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class World : MonoBehaviour {
 
     public static World instance;
 
     public bool useThreading = true;
-
-    public int seed;
 
     public Transform target;
     public int renderRange = 5;
@@ -31,6 +30,9 @@ public class World : MonoBehaviour {
     bool generating = false;
 
     bool InitialLevelLoaded = false;
+
+    public int seed = 0;
+    public int octaves = 1;
 
     void Awake() {
         instance = this;

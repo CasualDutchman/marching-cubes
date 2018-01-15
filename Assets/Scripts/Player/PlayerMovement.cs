@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class PlayerMovement : MonoBehaviour {
 
@@ -27,6 +28,10 @@ public class PlayerMovement : MonoBehaviour {
 	}
 	
 	void Update () {
+        if (Input.GetKeyDown(KeyCode.Escape)) {
+            SceneManager.LoadScene(0);
+        }
+
         //looking around
         yaw += Input.GetAxis("Mouse X") * mouseSpeed;
         pitch = Mathf.Clamp(pitch - Input.GetAxis("Mouse Y") * mouseSpeed, -90, 90);

@@ -25,8 +25,6 @@ public class Chunk {
     public bool dirty = true;
     public List<Block> dirtyBlocks = new List<Block>();
 
-    public bool hasMesh = false;
-
     public Chunk() { }
 
     public Chunk(World world, Vector2 pos) {
@@ -51,7 +49,7 @@ public class Chunk {
         //instantiate the block array
         blocks = new Block[worldObj.maxChunkSize, worldObj.maxHeight, worldObj.maxChunkSize];
 
-        float[,] map = Noise.GetMap(worldObj.maxChunkSize, position.x * worldObj.maxChunkSize, position.y * worldObj.maxChunkSize);
+        float[,] map = Noise.GetMap(worldObj.maxChunkSize, position.x * worldObj.maxChunkSize, position.y * worldObj.maxChunkSize, worldObj.seed, worldObj.octaves);
 
         for (int x = 0; x < worldObj.maxChunkSize; x++) {
             for (int y = 0; y < worldObj.maxHeight; y++) {
@@ -197,8 +195,6 @@ public class Chunk {
         meshCollider.sharedMesh = mesh;
 
         meshRenderer.material = Resources.Load<Material>("Material/WorldMaterial");
-
-        hasMesh = true;
 
         //Debug.Log("Chunk Done Loading");
 
